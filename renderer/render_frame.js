@@ -105,12 +105,14 @@ async function processHitsounds(beatmap_path){
 }
 
 async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path){
+	helper.log('entered renderHitsounds')
 	let media = await mediaPromise;
 	let execFilePromise = util.promisify(execFile);
 
 	let beatmapAudio = false;
 
 	try{
+		helper.log(start_time)
 		await execFilePromise(ffmpeg.path, [
 			'-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-t', actual_length * Math.max(1, time_scale) / 1000,
 			'-filter:a', `"afade=t=out:st=${Math.max(0, actual_length * time_scale / 1000 - 0.5 / time_scale)}:d=0.5,atempo=${time_scale},volume=0.7"`,
@@ -134,7 +136,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		for(const scoringFrame of scoringFrames){
 			if(scoringFrame.combo >= scoringFrame.previousCombo || scoringFrame.previousCombo < 30)
 				continue;
-	
+
 			hitSounds.push({
 				offset: (scoringFrame.offset - start_time) / time_scale,
 				sound: 'combobreak',
@@ -153,7 +155,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			if(beatmap.Replay.auto !== true){
 				if(hitObject.hitOffset == null)
 					continue;
-	
+
 				offset += hitObject.hitOffset;
 			}
 
@@ -172,7 +174,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 				}
 			}
 		}
-		
+
 		if(hitObject.objectName == 'slider'){
 			hitObject.EdgeHitSounds.forEach((edgeHitSounds, index) => {
 				edgeHitSounds.forEach(hitSound => {
@@ -181,7 +183,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 					if(index == 0 && beatmap.Replay.auto !== true){
 						if(hitObject.hitOffset == null)
 							return;
-						
+
 						offset += hitObject.hitOffset;
 					}
 
@@ -362,17 +364,25 @@ function downloadMedia(options, beatmap, beatmap_path, size, download_path){
                             if(beatmap.AudioFilename && fs.existsSync(path.resolve(extraction_path, beatmap.AudioFilename)))
                                 output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
 
-                            if(beatmap.bgFilename && fs.existsSync(path.resolve(extraction_path, beatmap.bgFilename)))
-                                output.background_path = path.resolve(extraction_path, beatmap.bgFilename);
+                            if(beatmap.bgFilename
+								&& fs.existsSync(path.resolve(extraction_path, beatmap.bgFilename))
+								&& !options.nobg){
+								output.background_path = path.resolve(extraction_path, beatmap.bgFilename);
+							}
 
                             if(beatmap.bgFilename && output.background_path){
                                 helper.log('resizing image');
+
+                                let bg_shade = 80;
+                                if (options.bg_opacity){
+									bg_shade = 100 - options.bg_opacity;
+								}
 
                                 Jimp.read(output.background_path).then(img => {
                                     img
                                     .cover(...size)
                                     .color([
-                                        { apply: 'shade', params: [80] }
+                                        { apply: 'shade', params: [bg_shade] }
                                     ])
                                     .writeAsync(path.resolve(extraction_path, 'bg.png')).then(() => {
                                         output.background_path = path.resolve(extraction_path, 'bg.png');
@@ -495,9 +505,13 @@ module.exports = {
 
             if(config.debug)
                 console.timeEnd('process beatmap');
+			// helper.log(options)
 
             if(time == 0 && options.percent){
                 time = beatmap.hitObjects[Math.floor(options.percent * (beatmap.hitObjects.length - 1))].startTime - 2000;
+				if(options.offset){
+					time += options.offset
+				}
             }else if(options.objects){
                 let objectIndex = 0;
 
@@ -508,6 +522,10 @@ module.exports = {
                     }
                 }
 
+				if(options.offset){
+					time += options.offset
+					helper.log(options.offset)
+				}
                 time -= 200;
 
                 if(beatmap.hitObjects.length > objectIndex + options.objects)
@@ -519,6 +537,10 @@ module.exports = {
             }else{
                 let firstNonSpinner = beatmap.hitObjects.filter(x => x.objectName != 'spinner');
                 time = Math.max(time, Math.max(0, firstNonSpinner[0].startTime - 1000));
+				if(options.offset){
+					time += options.offset
+					helper.log(options.offset)
+				}
             }
 
 			if(options.combo){
@@ -588,11 +610,14 @@ module.exports = {
             let time_frame = 1000 / fps * time_scale;
 
             let bitrate = 500 * 1024;
-
-            if(actual_length > 160 * 1000 && actual_length < 210 * 1000)
+			//
+            // if(actual_length > 160 * 1000 && actual_length < 210 * 1000)
+            //     size = [350, 262];
+            // else if(actual_length >= 210 * 1000)
+            //     size = [180, 128];
+            if(actual_length > 160 * 1000)
                 size = [350, 262];
-            else if(actual_length >= 210 * 1000)
-                size = [180, 128];
+
 
             if(actual_length > 360 * 1000){
                 actual_length = 360 * 1000;
@@ -718,9 +743,15 @@ module.exports = {
 						let audio = response[1];
 
 						if(media.background_path)
+						{
 							ffmpeg_args.unshift('-loop', '1', '-r', fps, '-i', `"${media.background_path}"`);
+							helper.log('hello using background')
+						}
 						else
+						{
 							ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
+							helper.log('hello not using background')
+						}
 
 						ffmpeg_args.push('-i', audio);
 
@@ -735,7 +766,8 @@ module.exports = {
 
 						ffmpeg_args.push(
 							'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
-							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`,
+							// '-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`,
+							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'vp9', '-row-mt', '1', '-b:v', `${bitrate}k`,
 							'-c:a', 'aac', '-b:a', '164k', '-shortest', '-preset', 'veryfast',
 							'-movflags', 'faststart', '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
 						);

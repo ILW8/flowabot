@@ -42,9 +42,9 @@ module.exports = {
             let { argv, msg, last_beatmap } = obj;
 
             let beatmap_id, beatmap_url, beatmap_promise, mods = [], time = 0,
-            ar, cs, od, length = 0, percent = 0, custom_url = false,
+            ar, cs, od, length = 0, percent = 0, custom_url = false, nobg = false, bg_opacity = 20,
             size = [400, 300], type, objects,
-            video_type = 'gif', audio = true, download_promise, osr;
+            video_type = 'gif', audio = true, download_promise, osr, offset;
 
             let score_id;
 
@@ -123,9 +123,11 @@ module.exports = {
                     ar = parseFloat(arg.substr(2));
                 }else if(arg.toLowerCase().startsWith('cs')){
                     cs = parseFloat(arg.substr(2));
-                }else if(arg.toLowerCase().startsWith('od')){
-                    od = parseFloat(arg.substr(2));
-                }else if(arg.startsWith('(') && arg.endsWith(')')){
+                }else if(arg.toLowerCase().startsWith('od')) {
+					od = parseFloat(arg.substr(2));
+				}else if(arg.toLowerCase().endsWith('offset')){
+                	offset = parseInt(arg) * 1000;
+				}else if(arg.startsWith('(') && arg.endsWith(')')){
                     objects = arg.substr(1, arg.length - 1).split(',').length;
                 }else if(arg == 'fail'){
                     if(msg.channel.id in last_beatmap){
@@ -137,7 +139,11 @@ module.exports = {
                         percent = last_beatmap[msg.channel.id].fail_percent;
                         length = 4;
                     }
-                }else{
+                } else if(arg == 'nobg') {
+					nobg = true;
+				} else if(arg.toLowerCase().endsWith('bgo')){
+					bg_opacity = parseInt(arg);
+				}else{
                     if(arg.startsWith('http://') || arg.startsWith('https://')){
                         beatmap_url = arg;
                         beatmap_promise = osu.parse_beatmap_url(beatmap_url);
@@ -211,7 +217,7 @@ module.exports = {
 									frame.get_frames(download_path, time, length * 1000, mods, size, {
                                         combo,
 										type: video_type, cs, ar, od, analyze, hidden, black: false, osr, score_id, audio, fps, speed,
-										fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
+										fill: video_type == 'mp4', noshadow: true, percent, offset, nobg, bg_opacity, border: false, objects
 									}, (err, send, remove_path) => {
 										if(err)
 											reject(err);

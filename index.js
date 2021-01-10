@@ -47,8 +47,8 @@ function checkCommand(msg, command){
     if(!msg.content.startsWith(config.prefix))
         return false;
 
-	if(msg.author.bot)
-		return false;
+	// if(msg.author.bot)
+	// 	return false;
 
     let argv = msg.content.split(' ');
 
@@ -196,7 +196,11 @@ function onMessage(msg){
     argv[0] = argv[0].substr(config.prefix.length);
 
     if(config.debug)
-        helper.log(msg.author.username, ':', msg.content);
+	{
+		helper.log(msg.author.username, '(sent message):', msg.content);
+		// helper.log(msg);
+	}
+
 
     commands.forEach(command => {
         let check_command = checkCommand(msg, command);
@@ -305,7 +309,23 @@ function onMessage(msg){
     });
 }
 
+function onMessageUpdate(oldMsg, newMsg){
+	if(config.debug)
+	{
+		helper.log(oldMsg.author.username, '(edited message):', oldMsg.content, '=>', newMsg.content);
+	}
+}
+
+function onMessageDelete(msg){
+	if(config.debug)
+	{
+		helper.log(msg.author.username, '(deleted message):', msg.content);
+	}
+}
+
 client.on('message', onMessage);
+client.on('messageUpdate', onMessageUpdate);
+client.on('messageDelete', onMessageDelete);
 
 client.on('ready', () => {
 	helper.log('flowabot is ready');
