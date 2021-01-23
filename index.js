@@ -190,6 +190,7 @@ fs.readdir(handlers_path, (err, items) => {
     });
 });
 
+
 function onMessage(msg){
     let argv = msg.content.split(' ');
 
@@ -197,8 +198,10 @@ function onMessage(msg){
 
     if(config.debug)
 	{
-		helper.log(msg.author.username, '(sent message):', msg.content);
-		// helper.log(msg);
+		let attachments = Array.from(msg.attachments, attach => attach[1].url);
+		if(attachments.length === 0) attachments = '';
+		helper.log("[Send message]", msg.author.username, ':', msg.content, attachments);
+		// helper.log(msg.attachments);
 	}
 
 
@@ -312,14 +315,20 @@ function onMessage(msg){
 function onMessageUpdate(oldMsg, newMsg){
 	if(config.debug)
 	{
-		helper.log(oldMsg.author.username, '(edited message):', oldMsg.content, '=>', newMsg.content);
+		// let old_attachments = Array.from(msg.attachments, attach => attach[1].url);
+		// if(old_attachments.length === 0) old_attachments = '';
+		// let new_attachments = Array.from(msg.attachments, attach => attach[1].url);
+		// if(new_attachments.length === 0) new_attachments = '';
+		helper.log("[Edit message]", oldMsg.author.username, ':', oldMsg.content, '=>', newMsg.content);
 	}
 }
 
 function onMessageDelete(msg){
 	if(config.debug)
 	{
-		helper.log(msg.author.username, '(deleted message):', msg.content);
+		let attachments = Array.from(msg.attachments, attach => attach[1].url);
+		if(attachments.length === 0) attachments = '';
+		helper.log("[Delete message]", msg.author.username, ':', msg.content, attachments);
 	}
 }
 
