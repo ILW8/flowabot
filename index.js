@@ -200,7 +200,7 @@ function onMessage(msg){
 	{
 		let attachments = Array.from(msg.attachments, attach => attach[1].url);
 		if(attachments.length === 0) attachments = '';
-		helper.log("[Send message]", msg.author.username, ':', msg.content, attachments);
+		helper.log(`[\x1b[32mSend message\x1b[0m] ${msg.author.username}:`, msg.cleanContent, attachments);
 		// helper.log(msg.attachments);
 	}
 
@@ -319,7 +319,7 @@ function onMessageUpdate(oldMsg, newMsg){
 		// if(old_attachments.length === 0) old_attachments = '';
 		// let new_attachments = Array.from(msg.attachments, attach => attach[1].url);
 		// if(new_attachments.length === 0) new_attachments = '';
-		helper.log("[Edit message]", oldMsg.author.username, ':', oldMsg.content, '=>', newMsg.content);
+		helper.log(`[\x1b[33mEdit message\x1b[0m] ${oldMsg.author.username}:`, oldMsg.cleanContent, '=>', newMsg.cleanContent);
 	}
 }
 
@@ -328,13 +328,36 @@ function onMessageDelete(msg){
 	{
 		let attachments = Array.from(msg.attachments, attach => attach[1].url);
 		if(attachments.length === 0) attachments = '';
-		helper.log("[Delete message]", msg.author.username, ':', msg.content, attachments);
+		helper.log(`[\x1b[31mDelete message\x1b[0m] ${msg.author.username}:`, msg.cleanContent, attachments);
+	}
+}
+
+function onPresenceUpdate(oldGuildMember, newGuildMember){
+	// helper.log(oldGuildMember.presence);
+	// helper.log(newGuildMember.presence);
+	try{
+		if(oldGuildMember.presence.status !== newGuildMember.presence.status){
+			let presence_colors = {
+				"offline": `\x1b[30m`,
+				"dnd": `\x1b[31m`,
+				"idle": `\x1b[33m`,
+				"online": `\x1b[1m\x1b[32m`
+			}
+
+			helper.log(`[\x1b[36mUser presence update\x1b[0m] ${newGuildMember.user.username}:`,
+				`${presence_colors[oldGuildMember.presence.status]}${oldGuildMember.presence.status}\x1b[0m ->`,
+				`${presence_colors[newGuildMember.presence.status]}${newGuildMember.presence.status}\x1b[0m`);
+		}
+
+	}catch(err){
+		helper.error(err);
 	}
 }
 
 client.on('message', onMessage);
 client.on('messageUpdate', onMessageUpdate);
 client.on('messageDelete', onMessageDelete);
+client.on('presenceUpdate', onPresenceUpdate);
 
 client.on('ready', () => {
 	helper.log('flowabot is ready');
