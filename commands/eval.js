@@ -8,7 +8,7 @@ let VMs = {};
 function initVM(user){
     if(!(user in VMs)){
         VMs[user] = new VM({
-           timeout: 100
+           timeout: 5000
         });
 
         VMs[user].run(`const rand = function(max){

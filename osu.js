@@ -588,7 +588,7 @@ function getScore(recent_raw, cb){
 	                        }).then(response => {
                                 recent.ur = response.ur;
 
-                                if(recent.countmiss == (response.miss || 0) 
+                                if(recent.countmiss == (response.miss || 0)
                                 && recent.count100 == (response['100'] || 0)
                                 && recent.count50 == (response['50'] || 0))
                                     recent.countsb = response.sliderbreak;
@@ -1050,7 +1050,7 @@ module.exports = {
 
         lines[2] = 'Beatmap Information';
 
-        lines[3] += `${moment("2015-01-01").startOf('day').seconds(recent.duration).format('mm:ss')} ~ `;
+        lines[3] += `**${moment("2015-01-01").startOf('day').seconds(recent.duration).format('mm:ss')}** ~ `;
         lines[3] += `CS**${+recent.cs.toFixed(1)}** AR**${+recent.ar.toFixed(1)}** OD**${+recent.od.toFixed(1)}** HP**${+recent.hp.toFixed(1)}** ~ `;
 
         if(recent.bpm_min != recent.bpm_max)
@@ -1222,7 +1222,7 @@ module.exports = {
 	        api.get('/get_user_best', { params: { u: options.user, limit: options.count } }),
 	        api.get('/get_user', { params: { u: options.user } })
         ];
-        
+
         const results = await Promise.all(requests);
 
         let user_best = results[0].data;
