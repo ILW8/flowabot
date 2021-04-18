@@ -1,5 +1,6 @@
 const osu = require('../osu.js');
 const helper = require('../helper.js');
+const { DateTime } = require('luxon');
 const config = require('../config.json');
 
 module.exports = {
@@ -30,8 +31,6 @@ module.exports = {
             if(match != null && !isNaN(match[0]))
                 count = Math.max(1, Math.min(match[0], 25));
 
-            console.log('count', count);
-
             if(!top_user){
                 if(user_ign[msg.author.id] == undefined){
                     reject(helper.commandHelp('ign-set'));
@@ -59,7 +58,7 @@ module.exports = {
                     embed.fields = [];
 
                     for(const top of tops){
-                        let name = `${top.rank_emoji} ${top.beatmap.artist} - ${top.beatmap.title} [${top.beatmap.version}]`;
+                        let name = `${top.rank_emoji} ${top.stars.toFixed(2)}★ ${top.beatmap.artist} - ${top.beatmap.title} [${top.beatmap.version}]`;
 
                         if(top.mods.length > 0)
                             name += ` +${top.mods.join(",")}`;
@@ -68,7 +67,7 @@ module.exports = {
 
                         let value = `[🔗](https://osu.ppy.sh/b/${top.beatmap_id}) `;
 
-                        if(top.pp_fc > top.pp)
+                        if(Number(top.maxcombo) < top.beatmap.max_combo && top.pp_fc > top.pp)
                             value += `**${Number(top.pp).toFixed(2)}pp** ➔ ${top.pp_fc.toFixed(2)}pp for ${top.acc_fc}% FC${helper.sep}`;
                         else
                             value += `**${Number(top.pp).toFixed(2)}pp**${helper.sep}`
@@ -93,6 +92,8 @@ module.exports = {
                             if(Number(top.count100) > 0 || Number(top.count50) > 0) value += helper.sep;
                             value += `${top.countmiss}xMiss`;
                         }
+
+                        value += `${helper.sep}${DateTime.fromSQL(top.date).toRelative()}`
 
                         embed.fields.push({ name, value })
                     }

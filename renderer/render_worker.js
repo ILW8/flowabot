@@ -1,14 +1,15 @@
 const { createCanvas, Image } = require('canvas');
 const path = require('path');
-const fs = require('fs-extra');
+const fs = require('fs').promises;
 const helper = require('../helper.js');
-const { isArray } = require('util');
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
 
 const KEY_OVERLAY_SIZE = 20;
 const KEY_OVERLAY_PADDING = 5;
+
+const FL_SIZES = [0.75, 0.6, 0.45]; // flashlight size relative to playfield height
 
 const resources = path.resolve(__dirname, "res");
 
@@ -43,10 +44,43 @@ process.on('message', async obj => {
         ];
     }
 
+    const flImages = [];
+
     function prepareCanvas(size){
         canvas = createCanvas(...size);
         ctx = canvas.getContext("2d");
         resize();
+
+        if(options.flashlight){
+            for(const sizeRelative of FL_SIZES){
+                const flCanvas = createCanvas(size[0] * 2, size[0] * 2);
+                const flCtx = flCanvas.getContext("2d");
+
+                flCtx.fillStyle = 'black';
+                flCtx.fillRect(0, 0, flCanvas.width, flCanvas.height);
+
+                const flSize = sizeRelative * PLAYFIELD_HEIGHT * scale_multiplier / 2;
+
+                const gradient = 
+                    flCtx.createRadialGradient(
+                        flCanvas.width / 2, flCanvas.height / 2, 
+                        flSize * 0.9, 
+                        flCanvas.width / 2, flCanvas.height / 2, 
+                        flSize);
+
+                gradient.addColorStop(0, 'rgba(0,0,0,1)');
+                gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+                flCtx.fillStyle = gradient;
+                flCtx.globalCompositeOperation = 'destination-out';
+
+                flCtx.beginPath();
+                flCtx.arc(flCanvas.width / 2, flCanvas.height / 2, flSize, 0, 2 * Math.PI);
+                flCtx.fill();
+
+                flImages.push(flCanvas);
+            }
+        }
     }
 
     function getCursorAtInterpolated(timestamp, replay){
@@ -546,6 +580,8 @@ process.on('message', async obj => {
                             }
                         }
 
+                        ctx.globalAlpha = 1;
+
                         let position;
 
                         // Draw follow point in circle
@@ -698,6 +734,35 @@ process.on('message', async obj => {
                 currentFrame = beatmap.ScoringFrames[beatmap.ScoringFrames.length - 1];
 
             const scoringFrames = [];
+
+            if(options.flashlight){
+                ctx.globalAlpha = 1;
+
+                let { current } = getCursorAt(time, beatmap.ReplayInterpolated);
+
+                const { combo } = currentFrame;
+
+                let flIndex = 0;
+
+                if(combo >= 100)
+                    flIndex = 1;
+                else if(combo >= 200)
+                    flIndex = 2;
+
+                const flImage = flImages[flIndex];
+
+                const cursorPos = playfieldPosition(current.x, current.y);
+
+                ctx.drawImage(flImage, cursorPos[0] - flImage.width / 2, cursorPos[1] - flImage.height / 2);
+
+                const currentSlider = beatmap.hitObjects.find(a => time >= a.startTime && time < a.endTime && a.objectName == 'slider')
+
+                if(currentSlider){
+                    ctx.globalAlpha = 0.8;
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            }
 
             do{
                 const newFrame = beatmap.ScoringFrames[previousFramesIndex];
@@ -942,13 +1007,30 @@ process.on('message', async obj => {
                 if(time - frame.offset > 5000)
                     break;
 
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = "rgba(255,255,255,0.7)";
+
+                if(options.analyze && previousFrame != null && time - frame.offset < 750){
+                    const position0 = playfieldPosition(previousFrame.x, previousFrame.y);
+                    const position1 = playfieldPosition(frame.x, frame.y);
+
+                    ctx.beginPath();
+
+                    ctx.moveTo(...position0);
+                    ctx.lineTo(...position1);
+
+                    ctx.stroke();
+                }
+
                 if(options.analyze && previousFrame != null && time - frame.offset < 750){
                     if(((frame.K1 || frame.M1) && !previousFrame.K1 && !previousFrame.M1)
                     ||((frame.K2 || frame.M2) && !previousFrame.K2 && !previousFrame.M2)){
-                        ctx.lineWidth = 1;
+
                         ctx.strokeStyle = "white";
 
                         const position = playfieldPosition(frame.x, frame.y);
+
+                        ctx.beginPath();
 
                         ctx.moveTo(position[0], position[1] - 5);
                         ctx.lineTo(position[0], position[1] + 5);
@@ -964,7 +1046,7 @@ process.on('message', async obj => {
                 ctx.strokeStyle = "rgba(255,255,255,0.4)";
 
                 if(frame.S == false && smokeActive){
-                    if(smokeActive){
+                    if(smokeActive && !options.analyze){
                         ctx.stroke();
                         smokeActive = false;
                     }
@@ -983,7 +1065,7 @@ process.on('message', async obj => {
                 }
             }
 
-            if(smokeActive){
+            if(smokeActive && !options.analyze){
                 ctx.stroke();
             }
 
@@ -1008,7 +1090,7 @@ process.on('message', async obj => {
                     ctx.fillRect(canvas.width - 30, keyOverlayTop + KEY_OVERLAY_SIZE * 3 + KEY_OVERLAY_PADDING * 3, KEY_OVERLAY_SIZE, KEY_OVERLAY_SIZE);
                 }
                 
-                if(Array.isArray(replay_point.previous)){
+                if(Array.isArray(replay_point.previous) && !options.analyze){
                     ctx.globalAlpha = .35;
 
                     ctx.beginPath();
@@ -1102,7 +1184,7 @@ process.on('message', async obj => {
                 }
             }
 
-            fs.writeFileSync(path.resolve(file_path, `${current_frame}.rgba`), Buffer.from(image_data));
+            await fs.writeFile(path.resolve(file_path, `${current_frame}.rgba`), Buffer.from(image_data));
 
             process.send(current_frame);
 

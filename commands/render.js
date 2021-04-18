@@ -1,6 +1,5 @@
 const { execFileSync } = require('child_process');
 const URL = require('url');
-const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
 const { fork } = require('child_process');
@@ -64,6 +63,7 @@ module.exports = {
             let combo = 0;
             let speed = 1;
             let hidden = false;
+            let flashlight = false;
             let analyze = false;
 
             argv.map(arg => arg.toLowerCase());
@@ -94,8 +94,10 @@ module.exports = {
                     length = 9;
                     video_type = 'mp4';
                     audio = true;
-                }else if(arg == 'hd'){
+                }else if(arg == 'hd' || arg == 'hidden'){
                     hidden = true;
+                }else if(arg == 'fl' || arg == 'flashlight'){
+                    flashlight = true;
                 }else if(arg == 'mp4'){
                     video_type = 'mp4';
                 }else if(arg == 'audio'){
@@ -164,7 +166,7 @@ module.exports = {
                     let _last_beatmap = last_beatmap[msg.channel.id];
 
                     beatmap_id = _last_beatmap.beatmap_id;
-                    download_promise = helper.downloadBeatmap(beatmap_id);
+                    download_promise = helper.downloadBeatmap(beatmap_id).catch(helper.error);
 
                     if(last_beatmap[msg.channel.id].score_id && mods.length == 0)
                         ({ score_id } = last_beatmap[msg.channel.id]);
@@ -194,38 +196,28 @@ module.exports = {
 
                 let preview_promise;
 
-                Promise.resolve(download_promise).then(() => {
+                Promise.resolve(download_promise).then(async () => {
                     if(type == 'strains' || type == 'aim' || type == 'speed'){
                         if(config.debug)
                             helper.log('getting strains for mods', mods);
 
-                        time = osu.get_strains(download_path, mods.join(''), type).max_strain_time_real - 2000;
+                        time = (await osu.get_strains(download_path, mods.join(''), type)).max_strain_time_real - 2000;
                     }else if(type == 'preview'){
 						preview_promise = osu.get_preview_point(download_path);
 					}
 
 					Promise.resolve(preview_promise).then(previewTime => {
-						console.log('previewTime', previewTime);
-
 						if(previewTime)
 							time = previewTime;
 
 						if(length > 0 || objects){
-							resolve({
-								content: 'Rendering...',
-								replace_promise: new Promise((resolve, reject) => {
-									frame.get_frames(download_path, time, length * 1000, mods, size, {
-                                        combo,
-										type: video_type, cs, ar, od, analyze, hidden, black: false, osr, score_id, audio, fps, speed,
-										fill: video_type == 'mp4', noshadow: true, percent, offset, nobg, bg_opacity, border: false, objects
-									}, (err, send, remove_path) => {
-										if(err)
-											reject(err);
+                            resolve(null);
 
-										resolve({file: send, name: 'render.gif', remove_path});
-									});
-								})
-							});
+                            frame.get_frames(download_path, time, length * 1000, mods, size, {
+                                combo,
+                                type: video_type, cs, ar, od, analyze, hidden, flashlight, black: false, osr, score_id, audio, fps, speed,
+                                fill: video_type == 'mp4', noshadow: true, percent, offset, nobg, bg_opacity, border: false, objects, msg
+                            });
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
                                 combo,
@@ -234,7 +226,7 @@ module.exports = {
 								if(err)
 									reject(err);
 
-								resolve({file: buf, name: 'frame.png'});
+								resolve({files: [{ attachment: buf, name: 'frame.png' }]});
 							});
 						}
 
