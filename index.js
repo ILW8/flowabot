@@ -336,27 +336,59 @@ function onMessageDelete(msg){
 	}
 }
 
-function onPresenceUpdate(oldGuildMember, newGuildMember){
-	// helper.log(oldGuildMember.presence);
-	// helper.log(newGuildMember.presence);
+// todo: fix duplicate user presence events originating from multiple guilds
+function onPresenceUpdate(oldPresence, newPresence){
+	let presence_colors = {
+		"unknown": `\x1b[30m`,
+		"offline": `\x1b[30m`,
+		"dnd": `\x1b[31m`,
+		"idle": `\x1b[33m`,
+		"online": `\x1b[1m\x1b[32m`
+	}
+
 	try{
-		if(oldGuildMember.presence.status !== newGuildMember.presence.status){
-			let presence_colors = {
-				"offline": `\x1b[30m`,
-				"dnd": `\x1b[31m`,
-				"idle": `\x1b[33m`,
-				"online": `\x1b[1m\x1b[32m`
+		if(oldPresence == null || oldPresence.status !== newPresence.status){
+			let username = newPresence.user.username;
+			let oldPresenceStatus = "unknown";
+			let presenceClients = Object.keys(newPresence.clientStatus).join(", ");
+			if(oldPresence != null){
+				oldPresenceStatus = oldPresence.status;
+			}
+			if(presenceClients.length > 0){
+				presenceClients = ` (${presenceClients})`;
 			}
 
-			helper.log(`[\x1b[36mUser presence update\x1b[0m] ${newGuildMember.user.username}:`,
-				`${presence_colors[oldGuildMember.presence.status]}${oldGuildMember.presence.status}\x1b[0m ->`,
-				`${presence_colors[newGuildMember.presence.status]}${newGuildMember.presence.status}\x1b[0m`);
-		}
 
+			helper.log(`[\x1b[36mUser presence update\x1b[0m] ${username}${presenceClients}:`,
+				`${presence_colors[oldPresenceStatus]}${oldPresenceStatus}\x1b[0m ->`,
+				`${presence_colors[newPresence.status]}${newPresence.status}\x1b[0m`);
+		}
 	}catch(err){
 		helper.error(err);
 	}
 }
+
+// function onPresenceUpdate(oldGuildMember, newGuildMember){
+// 	// helper.log(oldGuildMember.presence);
+// 	// helper.log(newGuildMember.presence);
+// 	try{
+// 		if(oldGuildMember.presence.status !== newGuildMember.presence.status){
+// 			let presence_colors = {
+// 				"offline": `\x1b[30m`,
+// 				"dnd": `\x1b[31m`,
+// 				"idle": `\x1b[33m`,
+// 				"online": `\x1b[1m\x1b[32m`
+// 			}
+//
+// 			helper.log(`[\x1b[36mUser presence update\x1b[0m] ${newGuildMember.user.username}:`,
+// 				`${presence_colors[oldGuildMember.presence.status]}${oldGuildMember.presence.status}\x1b[0m ->`,
+// 				`${presence_colors[newGuildMember.presence.status]}${newGuildMember.presence.status}\x1b[0m`);
+// 		}
+//
+// 	}catch(err){
+// 		helper.error(err);
+// 	}
+// }
 
 client.on('message', onMessage);
 client.on('messageUpdate', onMessageUpdate);
