@@ -215,8 +215,28 @@ module.exports = {
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
                                 combo,
-                                type: video_type, cs, ar, od, analyze, hidden, flashlight, black: false, osr, score_id, audio, fps, speed,
-                                fill: video_type == 'mp4', noshadow: true, percent, offset, nobg, bg_opacity, border: false, objects, msg
+								type: video_type,
+								cs,
+								ar,
+								od,
+								analyze,
+								hidden,
+								flashlight,
+								black: false,
+								osr,
+								score_id,
+								audio,
+								fps,
+								speed,
+                                fill: video_type === 'mp4',
+								noshadow: true,
+								percent,
+								offset,
+								nobg,
+								bg_opacity,
+								border: false,
+								objects,
+								msg
                             });
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
