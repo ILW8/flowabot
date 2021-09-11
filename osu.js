@@ -1062,7 +1062,7 @@ module.exports = {
 
         lines[0] += `${recent.score.toLocaleString()}${helper.sep}`;
         lines[0] += `${+recent.acc.toFixed(2)}%${helper.sep}`;
-        lines[0] += `${DateTime.fromSQL(recent.date).toRelative()}`;
+        lines[0] += `<t:${DateTime.fromSQL(recent.date).toSeconds()}:R>`;
 
         if(recent.pp_fc > recent.pp)
             lines[1] += `**${recent.unsubmitted ? '*' : ''}${+recent.pp.toFixed(2)}pp**${recent.unsubmitted ? '*' : ''} ➔ ${+recent.pp_fc.toFixed(2)}pp for ${+recent.acc_fc.toFixed(2)}% FC${helper.sep}`;
@@ -1651,7 +1651,7 @@ module.exports = {
             grades += `${getRankEmoji('S')} ${Number(data.count_rank_s).toLocaleString()} `;
             grades += `${getRankEmoji('A')} ${Number(data.count_rank_a).toLocaleString()}`;
 
-            let play_time = `${Math.ceil(Number(data.total_seconds_played) / 3600)}h`;
+            let play_time = `${Math.floor(Number(data.total_seconds_played) / 3600)}h`;
             play_time += ` ${Math.floor(Number(data.total_seconds_played) % 3600 / 60)}m`;
 
             let embed = {
@@ -1703,10 +1703,12 @@ module.exports = {
 
             if(options.extended){
                 const hitCount = Number(data.count300) + Number(data.count100) + Number(data.count50);
+                const s_count = (Number(data.count_rank_sh) + Number(data.count_rank_s)).toLocaleString();
+                const ss_count = (Number(data.count_rank_ssh) + Number(data.count_rank_ss)).toLocaleString();
 
                 embed.fields.push({
-                    name: 'SS Count',
-                    value: (Number(data.count_rank_ssh) + Number(data.count_rank_ss)).toLocaleString(),
+                    name: 'Combined Ranks',
+                    value: `${getRankEmoji('X')} ${ss_count} ${getRankEmoji('S')} ${s_count}`,
                     inline: true
                 },
                 {
