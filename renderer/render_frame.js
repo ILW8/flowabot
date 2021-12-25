@@ -878,7 +878,7 @@ module.exports = {
 						if (config.debug)
 							console.timeEnd('encode video');
 
-						renderStatus[1] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
+						renderStatus[1] = `✓ rendering video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
 						resolveRender({
 							files: [{
@@ -899,7 +899,7 @@ module.exports = {
 						// helper.log(line);
 						const frame = parseInt(line.substring(6).trim());
 
-						renderStatus[1] = `– encoding video (${Math.round(frame / amount_frames * 100)}%)`;
+						renderStatus[1] = `– rendering video (${Math.round(frame / amount_frames * 100)}%)`;
 					});
 
 					newPipeFrameLoop(ffmpegProcess, err => {
