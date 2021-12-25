@@ -18,7 +18,9 @@
     },
     "license": "MIT",
     "dependencies": {
+        "aws-sdk": "^2.1048.0",
         "axios": "^0.21.1",
+        "booba": "^0.0.12",
         "canvas": "^2.7.0",
         "chalk": "^4.1.0",
         "chart.js": "^2.9.4",
