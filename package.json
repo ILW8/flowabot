@@ -35,6 +35,7 @@
         "mathjs": "^9.3.0",
         "node-emoji": "^1.10.0",
         "node-fetch": "^2.6.6",
+        "node-ipc": "^9.2.1",
         "node-localstorage": "^2.1.6",
         "node-osr": "^1.2.1",
         "object-path": "^0.11.5",
