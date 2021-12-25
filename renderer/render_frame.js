@@ -999,6 +999,7 @@ module.exports = {
 
 									if (config.debug)
 										console.timeEnd('render beatmap');
+									ipc.server.stop();
 								}
 							});
 
