@@ -283,7 +283,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			await execFilePromise(ffmpeg, mergeArgs, {shell: true});
 
 			resolve(path.resolve(file_path, 'merged.wav'));
-		});
+		}).catch(reject);
 	});
 }
 
