@@ -383,7 +383,8 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 
 
 let s3 = null;
-let beatmap, speed_multiplier, has_aborted;
+let beatmap, speed_multiplier;
+let has_aborted = false;
 
 function check_abort(render_id){
 	let renders = JSON.parse(helper.getItem("render_queue"));
