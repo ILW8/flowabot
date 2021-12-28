@@ -21,6 +21,7 @@ const crypto = require("crypto");
 
 let WAITING_FOR_SERVER_ACK = false;
 let frame_counter = 0;
+let stop = false;
 let images = {
 	"arrow": path.resolve(resources, "images", "arrow.svg")
 };
@@ -1175,7 +1176,10 @@ async function run_worker_job(data) {
 
 	if(end_time){
 		while(time < end_time){
-			while (WAITING_FOR_SERVER_ACK){
+			if (stop){
+				break;
+			}
+			while (WAITING_FOR_SERVER_ACK && !stop){
 				await new Promise(r => setTimeout(r, 20));
 			}
 
@@ -1222,8 +1226,6 @@ async function run_worker_job(data) {
 			current_frame += threads;
 			time += time_frame;
 		}
-
-		ipc.of.world.emit('app.readyToTerminate', 'true');
 	}else{  // no end time -> render single frame
 		processFrame(time, options);
 
@@ -1291,14 +1293,20 @@ ipc.connectTo(
 			process.exit(0);
 		})
 
+		stop = false;
+
 		ipc.of.world.on(
 			'receiveWork',
 			async function (data){
 				// log_as_worker(data);
 				await run_worker_job(data);
-
+				ipc.of.world.emit('app.readyToTerminate', 'true');
 			}
 		)
+
+		ipc.of.world.on('abort', async function(){
+			stop = true;
+		})
 	}
 );
 

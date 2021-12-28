@@ -381,9 +381,21 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 	return output;
 }
 
-let beatmap;
 
 let s3 = null;
+let beatmap, speed_multiplier, has_aborted;
+
+function check_abort(render_id){
+	let renders = JSON.parse(helper.getItem("render_queue"));
+	// return renders === null ? false : (renders.hasOwnProperty(render_id) ? renders[render_id].abort : false);
+	if (renders === null){
+		return false;
+	}
+	if (renders.hasOwnProperty(render_id)){
+		return renders[render_id].abort;
+	}
+	return false;
+}
 
 module.exports = {
 	get_frame: function (beatmap_path, time, enabled_mods, size, options, cb) {
@@ -468,11 +480,11 @@ module.exports = {
 		}
 
 
-		const {msg} = options;
+		const {msg, render} = options;
 
 		options.msg = null;
 
-		const renderStatus = ['– processing beatmap', '– rendering video'];
+		const renderStatus = ['– processing beatmap', '– rendering video', `[render ID ${render.id}]`];
 
 		// noinspection JSCheckFunctionSignatures
 		const renderMessage = await msg.channel.send({embed: {description: renderStatus.join("\n")}});
@@ -736,7 +748,7 @@ module.exports = {
 					if (typeof next_frame === 'undefined') {
 						// helper.log("queue empty... sleeping (waiting on " + next_frame_worker_id + " - video frame #" + frame_counter +")");
 						// helper.log("waiting on next frame, sleeping...");
-						await new Promise(r => setTimeout(r, 50));
+						await new Promise(r => setTimeout(r, 20));
 						continue;
 					}
 
@@ -984,22 +996,39 @@ module.exports = {
 								size
 							});
 
+							let abort_interval = setInterval(() => {
+								if (check_abort(render.id)){
+									has_aborted = true;
+									ipc.server.emit(socket, 'abort', '');
+								}
+							}, 500);
 
 
 							worker_to_init.on('close', code => {
-								if (code > 0) {
-									cb("Error rendering beatmap");
-									return false;
-								}
-
+								clearInterval(abort_interval);
 								done++;
 
 								if (done === threads) {
 									// renderStatus[1] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
 
+									let renders = JSON.parse(helper.getItem("render_queue"));
+									delete renders[render.id];
+									helper.setItem("render_queue", JSON.stringify(renders));
+
+
 									if (config.debug)
 										console.timeEnd('render beatmap');
+
+									if (has_aborted){
+										resolveRender(`Aborted render ${render.id}.`);
+									}
+
 									ipc.server.stop();
+								}
+
+								if (code > 0) {
+									cb("Error rendering beatmap");
+									return false;
 								}
 							});
 
@@ -1010,6 +1039,8 @@ module.exports = {
 					ipc.server.on(
 						'app.framedata',
 						function(data, socket){
+
+
 							// todo: implement slowing down of frame tap if video encoder can't keep up
 							let frame_wid = data.worker_id;
 							worker_frame_buffers[frame_wid].push(Buffer.from(data.frame_data, 'base64'));
