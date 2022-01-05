@@ -29,6 +29,8 @@ module.exports = {
                 reject("BPM is not a number");
 
             if(!divisors.includes(divisor))
+                divisors.push(divisor);
+			if(!/1\/\d+/.test(divisor))
                 reject("Not a valid beat snap divisor");
 
             let divisor_parts = divisor.split("/");
@@ -44,34 +46,20 @@ module.exports = {
             const multipliers = [1, 1.5, 0.75];
 
             for(let i = 0; i <= 2; i++){
-                let name = "";
-                let value = "";
+                let name = "`";
+                let value = "`";
 
                 divisors.forEach((div, index) => {
                     let bpm_calculated = bpm_raw * (1 / Number(div.split("/")[1])) * multipliers[i];
 
-                    if(div == divisor){
-                        value += '**';
-                        name += '**';
-                    }
+                    name += div === divisor ? ` (${div})`.padStart(5, " ") : String(div).padStart(5, " ");
+                    value += String(Math.round(bpm_calculated)).padStart(5, " ");
 
-                    value += Math.round(bpm_calculated);
-                    name += div;
-
-                    if(div == divisor){
-                        value += '**';
-                        name += '**';
-                    }
 
                     if(index < divisors.length){
-                        name += '   ';
+                        name += ' ';
 
-                        if(bpm_calculated < 100)
-                            value += '    ';
-                        else if(bpm_calculated < 1000)
-                            value += '  ';
-                        else
-                            value += ' ';
+                        value += ' ';
                     }
                 });
 
@@ -83,6 +71,9 @@ module.exports = {
 
                 if(i == 2)
                     name += '+HT';
+
+				name += '`';
+				value += '`';
 
                 embed.fields.push({
                     name, value
